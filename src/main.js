@@ -3,7 +3,7 @@ import PreloadScene from './scenes/PreloadScene.js';
 import WorldScene from './scenes/WorldScene.js';
 import CharacterScene from './scenes/CharacterScene.js';
 
-new Phaser.Game({
+const game = new Phaser.Game({
   type: Phaser.AUTO,
   parent: 'game',
   backgroundColor: '#0b1710',
@@ -13,3 +13,6 @@ new Phaser.Game({
   },
   scene: [PreloadScene, WorldScene, CharacterScene],
 });
+
+// Nur beim Entwickeln: Zugriff für automatische Tests
+if (import.meta.env.DEV) window.__game = game;

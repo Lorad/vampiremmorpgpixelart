@@ -305,6 +305,24 @@ function buildMap() {
   }
   trees.sort((a, b) => a.y - b.y);
 
+  // Begehbarer Bereich: die Wiese plus ein Streifen Waldrand, damit man
+  // zwischen die vordersten Bäume und hinter ihre Kronen laufen kann.
+  // Alles außerhalb wird durch vier Sperr-Rechtecke blockiert.
+  const walk = {
+    x0: MEADOW.x0 * TILE - 4,
+    y0: MEADOW.y0 * TILE + 2,
+    x1: MEADOW.x1 * TILE + 4,
+    y1: MEADOW.y1 * TILE + 10,
+  };
+  const mapW = MAP_W * TILE;
+  const mapH = MAP_H * TILE;
+  const blocks = [
+    { x: 0, y: 0, w: mapW, h: walk.y0 },
+    { x: 0, y: walk.y1, w: mapW, h: mapH - walk.y1 },
+    { x: 0, y: 0, w: walk.x0, h: mapH },
+    { x: walk.x1, y: 0, w: mapW - walk.x1, h: mapH },
+  ];
+
   return {
     type: 'map',
     version: '1.10',
@@ -317,8 +335,8 @@ function buildMap() {
     height: MAP_H,
     tilewidth: TILE,
     tileheight: TILE,
-    nextlayerid: 3,
-    nextobjectid: trees.length + 1,
+    nextlayerid: 4,
+    nextobjectid: trees.length + blocks.length + 1,
     layers: [
       {
         id: 1, name: 'ground', type: 'tilelayer', x: 0, y: 0,
@@ -332,6 +350,15 @@ function buildMap() {
           id: i + 1, name: 'tree', type: 'tree', x: t.x, y: t.y,
           width: 0, height: 0, rotation: 0, point: true, visible: true,
           properties: [{ name: 'variant', type: 'int', value: t.variant }],
+        })),
+      },
+      {
+        id: 3, name: 'collision', type: 'objectgroup', draworder: 'topdown',
+        x: 0, y: 0, opacity: 1, visible: true,
+        // Sperr-Rechtecke (Baumstämme kommen zusätzlich aus der Ebene "trees")
+        objects: blocks.map((b, i) => ({
+          id: trees.length + 1 + i, name: 'bounds', type: 'block',
+          x: b.x, y: b.y, width: b.w, height: b.h, rotation: 0, visible: true,
         })),
       },
     ],

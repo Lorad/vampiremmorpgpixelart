@@ -1,6 +1,6 @@
 import Phaser from 'phaser';
-import CharacterRig, { DIRECTIONS } from '../characters/CharacterRig.js';
-import { startIdle } from '../characters/idle.js';
+import Player from '../world/Player.js';
+import { CollisionWorld } from '../world/collision.js';
 
 export const TILE = 32;
 
@@ -35,41 +35,64 @@ export default class WorldScene extends Phaser.Scene {
     // 3/4-Ansicht: Alles, was "steht" (Bäume, Figuren), wird nach dem
     // Fußpunkt (y) sortiert. Wer weiter unten steht, wird davor gezeichnet.
     this.trees = map.getObjectLayer('trees').objects.map((obj) => {
-      const tree = this.add.image(obj.x, obj.y, 'trees', prop(obj, 'variant', 0));
-      tree.setOrigin(TREE.baseX / TREE.width, TREE.baseY / TREE.height);
-      tree.setDepth(obj.y);
-      return tree;
+      const img = this.add.image(obj.x, obj.y, 'trees', prop(obj, 'variant', 0));
+      img.setOrigin(TREE.baseX / TREE.width, TREE.baseY / TREE.height);
+      img.setDepth(obj.y);
+      // Umriss der Baumkrone (ohne Stamm und Schatten), fürs Durchsichtig-Werden
+      const left = obj.x - TREE.baseX;
+      const top = obj.y - TREE.baseY;
+      return { img, base: obj.y, x0: left + 4, x1: left + TREE.width - 4, y0: top + 2, y1: top + 62 };
     });
 
-    // Die Vampirin steht auf der Wiese, nahe am nördlichen Waldrand
-    const rig = this.cache.json.get('vampire-rig');
-    this.vampire = new CharacterRig(this, 17 * TILE, 9 * TILE, 'vampire', rig, 'S');
-    this.vampire.setDepth(this.vampire.y);
-    startIdle(this, this.vampire);
+    // Kollision aus derselben Karte (Baumstämme + Wiesenrand)
+    const collision = CollisionWorld.fromTiledMap(this.cache.tilemap.get('world').data);
 
-    // Q / E: Figur drehen (Vorschau der 8 Richtungen)
-    const turn = (step) => {
-      const i = DIRECTIONS.indexOf(this.vampire.direction);
-      this.vampire.setDirection(DIRECTIONS[(i + step + DIRECTIONS.length) % DIRECTIONS.length]);
-    };
-    this.input.keyboard.on('keydown-Q', () => turn(-1));
-    this.input.keyboard.on('keydown-E', () => turn(1));
+    // Die Vampirin startet auf der Wiese, nahe am nördlichen Waldrand
+    this.player = new Player(this, 17 * TILE, 9 * TILE, collision,
+      this.cache.json.get('vampire-rig'));
+
     this.input.keyboard.on('keydown-F', () => this.scene.start('Character'));
-    setHud('Q / E: Figur drehen · F: Figuren-Ansicht');
+    setHud('WASD / Pfeiltasten: laufen · F: Figuren-Ansicht');
 
+    // Kamera folgt der Figur (auf ganze Pixel gerundet, ohne Nachziehen = kein Zittern)
     const cam = this.cameras.main;
     cam.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
-    this.fitCamera();
-    this.scale.on('resize', this.fitCamera, this);
-    this.events.once('shutdown', () => this.scale.off('resize', this.fitCamera, this));
+    cam.startFollow(this.player.sprite, true);
+    cam.setFollowOffset(0, 28); // Körpermitte statt Füße in die Bildmitte
+    this.updateZoom();
+    this.scale.on('resize', this.updateZoom, this);
+    this.events.once('shutdown', () => this.scale.off('resize', this.updateZoom, this));
   }
 
-  /** Ganzzahliger Zoom (gleich große Pixel), Kamera auf der Figur. */
-  fitCamera() {
-    const cam = this.cameras.main;
+  update(time, delta) {
+    this.player.update(time, delta);
+    this.fadeTreesInFront(delta);
+  }
+
+  /**
+   * Bäume, die vor der Figur stehen und sie verdecken, werden halbdurchsichtig,
+   * damit man die Figur im Wald nicht aus den Augen verliert.
+   */
+  fadeTreesInFront(delta) {
+    const { x, y } = this.player.sprite;
+    // ungefährer Körper der Figur (Fußpunkt unten Mitte)
+    const body = { x0: x - 14, x1: x + 14, y0: y - 56, y1: y - 2 };
+    const k = Math.min(1, delta / 120); // weiches Ein-/Ausblenden
+    for (const t of this.trees) {
+      const covers = t.base > y && t.x0 < body.x1 && t.x1 > body.x0 && t.y0 < body.y1 && t.y1 > body.y0;
+      const target = covers ? 0.4 : 1;
+      if (t.img.alpha !== target) {
+        const a = t.img.alpha + (target - t.img.alpha) * k;
+        t.img.setAlpha(Math.abs(a - target) < 0.02 ? target : a);
+      }
+    }
+  }
+
+  /** Ganzzahliger Zoom, damit alle Pixel gleich groß bleiben (~20×12 Kacheln sichtbar). */
+  updateZoom() {
     const { width, height } = this.scale.gameSize;
-    const zoom = Math.max(1, Math.floor(Math.min(width / (20 * TILE), height / (12 * TILE))));
-    cam.setZoom(zoom);
-    cam.centerOn(this.vampire.x, this.vampire.y - 30);
+    this.cameras.main.setZoom(
+      Math.max(1, Math.floor(Math.min(width / (20 * TILE), height / (12 * TILE)))),
+    );
   }
 }

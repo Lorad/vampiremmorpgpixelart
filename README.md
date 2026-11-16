@@ -2,17 +2,25 @@
 
 Ein Pixel-Art-MMORPG im Browser: **Vampire gegen Menschen**, in 3/4-Ansicht
 („schräg von oben“). Gebaut mit [Phaser 4](https://phaser.io) und [Vite](https://vite.dev).
+Gespielt wird am PC im Browser mit der Tastatur.
 
-![Die Vampirin in allen 8 Richtungen](art/vampire/preview_8_richtungen.png)
+![Die Vampirin läuft in allen 8 Richtungen](art/vampire/laufzyklus_8_richtungen.gif)
 
 ## Stand
 
 - **Welt:** kleine Wiese, umgeben von dichtem Wald. Bodenkacheln 32×32 px,
   Bäume als einzelne Objekte. Alles, was steht, wird nach seinem Fußpunkt
-  sortiert, sodass Figuren hinter Baumkronen verschwinden können.
-- **Vampirin:** aus dem Referenzbild rekonstruiert (62×62 px, 18 Farben), in
-  Idle-Pose mit hängenden Armen, zerlegt in 16 Skelett-Teile, in allen
-  **8 Himmelsrichtungen**.
+  sortiert, sodass Figuren hinter Baumkronen laufen können. Bäume, die vor der
+  Figur stehen, werden dabei halbdurchsichtig.
+- **Vampirin:** aus dem Referenzbild rekonstruiert (62×62 px, 18 Farben),
+  zerlegt in 16 Skelett-Teile, in allen **8 Himmelsrichtungen**.
+- **Steuerung:** Laufen mit WASD oder Pfeiltasten in 8 Richtungen (schräg nicht
+  schneller), die Figur dreht sich in Laufrichtung. Baumstämme und der Waldrand
+  blockieren, an Ecken gleitet sie vorbei. Die Kamera folgt.
+- **Animation:** Laufzyklus aus 8 Bildern über das Skelett (Arme und Beine
+  schwingen, Körper federt, Rock und Haare schwingen mit), im Stehen ruhiges
+  Atmen. Gezeichnet wird pixelgenau: Die Figur wird in Originalgröße
+  zusammengesetzt und erst danach vergrößert.
 
 ## Starten
 
@@ -25,32 +33,44 @@ Dann im Browser <http://localhost:5173> öffnen.
 
 | Taste | Funktion |
 | --- | --- |
-| `Q` / `E` | Figur drehen (8 Richtungen) |
+| `W` `A` `S` `D` / Pfeiltasten | laufen |
 | `F` | Figuren-Ansicht ↔ Welt (direkt: <http://localhost:5173/#figur>) |
+| `Leertaste` (Figuren-Ansicht) | Laufen an/aus |
+| `B` (Figuren-Ansicht) | alle Einzelbilder des Laufzyklus |
 
 ## Projektaufbau
 
 ```
 src/
-  main.js                    Spiel-Konfiguration
-  scenes/PreloadScene.js     lädt alle Grafiken
-  scenes/WorldScene.js       die Welt
-  scenes/CharacterScene.js   Figuren-Ansicht (8 Richtungen + Teile)
-  characters/CharacterRig.js Figur aus Teilen mit Skelett
-  characters/idle.js         Atem-Animation
+  main.js                     Spiel-Konfiguration
+  scenes/PreloadScene.js      lädt alle Grafiken
+  scenes/WorldScene.js        die Welt (Bäume, Spielfigur, Kamera)
+  scenes/CharacterScene.js    Figuren-Ansicht (8 Richtungen, Teile, Einzelbilder)
+  world/Player.js             Spielfigur: Tastatur, Bewegung, Blickrichtung
+  world/collision.js          Bewegung + Kollision (ohne Phaser, auch für einen Server)
+  characters/CharacterRig.js  Figur aus Teilen mit Skelett
+  characters/RiggedSprite.js  zeichnet ein Rig pixelgenau in eine Textur
+  characters/animations.js    Laufzyklus und Atmen als Posen
 public/assets/
-  tilesets/tiles.png         Bodenkacheln
-  sprites/trees.png          Bäume
-  maps/world.json            Karte (Format des Map-Editors „Tiled“)
-  characters/vampire.*       Vampirin: Texturatlas + Skelett (rig.json)
+  tilesets/tiles.png          Bodenkacheln
+  sprites/trees.png           Bäume
+  maps/world.json             Karte (Format des Map-Editors „Tiled“), inkl. Kollisionsebene
+  characters/vampire.*        Vampirin: Texturatlas + Skelett (rig.json)
 art/vampire/
-  reference.png              Original-Vorlage
-  parts/<Richtung>/NN_*.png  jedes Teil als eigene Ebene (62×62, NN = Zeichenreihenfolge)
-  vampire_<Richtung>.png     zusammengesetzte Figur je Richtung
+  reference.png               Original-Vorlage
+  parts/<Richtung>/NN_*.png   jedes Teil als eigene Ebene (62×62, NN = Zeichenreihenfolge)
+  vampire_<Richtung>.png      zusammengesetzte Figur je Richtung
 tools/
-  generate-world.mjs         erzeugt Kacheln, Bäume und Karte
-  character/                 erzeugt die Vampirin aus der Vorlage
+  generate-world.mjs          erzeugt Kacheln, Bäume und Karte
+  character/                  erzeugt die Vampirin aus der Vorlage
 ```
+
+## Bewegung und Kollision
+
+Gerechnet wird mit kleinen Rechtecken am Boden: der Fußbox der Figur, einer Box
+am Stammfuß jedes Baumes und vier Sperr-Rechtecken um die Wiese (Kartenebene
+`collision`). `src/world/collision.js` braucht kein Phaser. Ein späterer
+Spielserver kann so dieselbe Karte und dieselbe Logik verwenden.
 
 ## Die Vampirin (Skelett)
 
@@ -70,14 +90,30 @@ sind aufgefüllt, damit beim Bewegen keine Löcher entstehen.
 die Gelenkpunkte (`pivots`) und die Zeichenreihenfolge. Im Spiel:
 
 ```js
-const vampire = new CharacterRig(scene, x, y, 'vampire', rig, 'S');
-vampire.setDirection('NE');                  // Blickrichtung
-vampire.setBone('forearm_R', { angle: -30 }); // Unterarm anwinkeln (Grad)
-vampire.setBone('torso', { y: 1 });           // Oberkörper 1 px absenken
+const vampire = new RiggedSprite(scene, x, y, 'vampire', rig, 'S');
+vampire.setDirection('NE');                    // Blickrichtung
+vampire.setPose({ forearm_R: { angle: -30 } }); // Unterarm anwinkeln (Grad)
+vampire.setPose(walkPose('NE', 0.25));          // Laufzyklus, rechtes Bein vorne
 ```
 
 Kinder-Knochen bewegen sich automatisch mit, zum Beispiel die Hand mit dem
 Oberarm.
+
+### Laufanimation
+
+`walkPose(richtung, phase)` in `src/characters/animations.js` berechnet die
+Pose für einen Zeitpunkt im Laufzyklus (Phase 0–1 = zwei Schritte, 8 feste
+Bilder für den Pixel-Look). Je nach Richtung wird gemischt:
+
+- **seitlich (Ost/West):** Beine und Arme schwingen an Hüfte und Schulter,
+  das Knie knickt beim Durchschwingen ein.
+- **Front/Rücken (Süd/Nord):** Die Füße werden vor und zurück gesetzt
+  (im Bild tiefer/höher) und kurz angehoben.
+- **schräg:** eine Mischung aus beidem.
+
+Dazu federt der Körper 1 px, die Haare federn einen Takt verzögert nach und
+der Rock schwingt mit. Die Schrittlänge passt zur Laufgeschwindigkeit, damit die
+Füße nicht rutschen.
 
 ### Wie die 8 Richtungen entstehen
 
@@ -89,6 +125,8 @@ Oberarm.
 - **Südost / Nordost:** Jede Körperpartie wird zeilenweise als Ellipse gedreht.
   Jedes Pixel stammt aus der Ansicht, die diese Stelle am frontalsten zeigt.
 - **West / Südwest / Nordwest:** gespiegelt (links/rechts getauscht).
+
+![Die Vampirin in allen 8 Richtungen](art/vampire/preview_8_richtungen.png)
 
 Alles neu bauen (benötigt Python 3 mit Pillow und numpy):
 

@@ -10,23 +10,28 @@ export const DIRECTIONS = ['S', 'SW', 'W', 'NW', 'N', 'NE', 'E', 'SE'];
  *   Knochen. Knochen haben einen Elternknochen (z. B. Unterarm → Oberarm).
  * - Für jede der 8 Richtungen gibt es eigene Bilder, Gelenkpunkte und eine
  *   eigene Zeichenreihenfolge (von hinten nach vorne).
- * - Knochen lassen sich drehen und verschieben (setBone). Kinder bewegen sich
- *   automatisch mit (Vorwärtskinematik) – die Grundlage für Animationen.
- * - Der Ursprung des Containers ist der Fußpunkt der Figur. Damit funktioniert
- *   die Tiefensortierung der 3/4-Ansicht über `depth = y`.
+ * - Knochen lassen sich drehen und verschieben (setBone / setPose). Kinder
+ *   bewegen sich automatisch mit (Vorwärtskinematik).
+ * - Der Ursprung des Containers ist der Fußpunkt der Figur.
+ *
+ * Für pixelgenaue Darstellung wird das Rig nicht direkt angezeigt, sondern
+ * von RiggedSprite in eine kleine Textur gezeichnet (addToScene = false).
  */
 export default class CharacterRig extends Phaser.GameObjects.Container {
   /**
    * @param {Phaser.Scene} scene
-   * @param {number} x Fußpunkt x (Welt)
-   * @param {number} y Fußpunkt y (Welt)
+   * @param {number} x Fußpunkt x
+   * @param {number} y Fußpunkt y
    * @param {string} textureKey Schlüssel des Texturatlas
    * @param {object} rig Inhalt von *.rig.json
+   * @param {string} [direction] Start-Blickrichtung
+   * @param {{addToScene?: boolean}} [options]
    */
-  constructor(scene, x, y, textureKey, rig, direction = 'S') {
+  constructor(scene, x, y, textureKey, rig, direction = 'S', { addToScene = true } = {}) {
     super(scene, x, y);
     this.rig = rig;
     this.direction = null;
+    this.version = 0; // zählt jede sichtbare Änderung (für RiggedSprite)
     this.pose = {};
     for (const bone of Object.keys(rig.bones)) this.pose[bone] = { angle: 0, x: 0, y: 0 };
 
@@ -40,7 +45,7 @@ export default class CharacterRig extends Phaser.GameObjects.Container {
       }
     }
     this.setDirection(direction);
-    scene.add.existing(this);
+    if (addToScene) scene.add.existing(this);
   }
 
   /** Wechselt die Blickrichtung ('S', 'SE', 'E', …). */
@@ -64,21 +69,36 @@ export default class CharacterRig extends Phaser.GameObjects.Container {
   }
 
   /** Dreht/verschiebt einen Knochen relativ zur Grundpose (Winkel in Grad). */
-  setBone(bone, { angle, x, y } = {}) {
-    const p = this.pose[bone];
-    if (!p) throw new Error(`Unbekannter Knochen: ${bone}`);
-    if (angle !== undefined) p.angle = angle;
-    if (x !== undefined) p.x = x;
-    if (y !== undefined) p.y = y;
+  setBone(bone, values) {
+    this.applyBone(bone, values);
+    this.updatePose();
+    return this;
+  }
+
+  /**
+   * Setzt mehrere Knochen auf einmal, z. B. ein Animationsbild:
+   * { torso: { y: 1 }, thigh_R: { angle: -20 }, … }.
+   * Knochen, die nicht genannt werden, gehen in die Grundpose zurück.
+   */
+  setPose(pose = {}) {
+    for (const bone of Object.keys(this.pose)) {
+      this.applyBone(bone, { angle: 0, x: 0, y: 0, ...pose[bone] });
+    }
     this.updatePose();
     return this;
   }
 
   /** Setzt alle Knochen auf die Grundpose zurück. */
   resetPose() {
-    for (const p of Object.values(this.pose)) Object.assign(p, { angle: 0, x: 0, y: 0 });
-    this.updatePose();
-    return this;
+    return this.setPose({});
+  }
+
+  applyBone(bone, { angle, x, y } = {}) {
+    const p = this.pose[bone];
+    if (!p) throw new Error(`Unbekannter Knochen: ${bone}`);
+    if (angle !== undefined) p.angle = angle;
+    if (x !== undefined) p.x = x;
+    if (y !== undefined) p.y = y;
   }
 
   /** Vorwärtskinematik: Gelenkpositionen und Winkel aller Teile berechnen. */
@@ -115,5 +135,6 @@ export default class CharacterRig extends Phaser.GameObjects.Container {
       img.setPosition(w.x - origin.x, w.y - origin.y);
       img.setAngle(w.angle);
     }
+    this.version++;
   }
 }
