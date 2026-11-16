@@ -1,5 +1,7 @@
 import Phaser from 'phaser';
+import PreloadScene from './scenes/PreloadScene.js';
 import WorldScene from './scenes/WorldScene.js';
+import CharacterScene from './scenes/CharacterScene.js';
 
 new Phaser.Game({
   type: Phaser.AUTO,
@@ -9,5 +11,5 @@ new Phaser.Game({
   scale: {
     mode: Phaser.Scale.RESIZE, // Spielfläche = ganzes Browserfenster
   },
-  scene: [WorldScene],
+  scene: [PreloadScene, WorldScene, CharacterScene],
 });
