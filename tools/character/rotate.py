@@ -108,6 +108,97 @@ def outline_group(parts, names):
                 g[y][x] = "K"
 
 
+def clean_hem(parts, names, y_from=44):
+    """Rocksaum aufräumen: Löcher füllen, Saumlinie glätten, schmale Lücken schließen.
+
+    Beim Drehen treffen die spitzen Rockzipfel der Frontansicht auf den schrägen
+    Saum der Seitenansicht – das ergibt Fransen und Löcher am unteren Rand.
+    """
+    def owner(x, y):
+        for n in names:  # vordere Ebene zuerst
+            if parts[n][y][x] != ".":
+                return n
+        return None
+
+    def fill_from(n, x, y, sx, sy):
+        c = parts[n][sy][sx]
+        parts[n][y][x] = "d" if c == "K" else c  # Umriss wird später neu gezogen
+
+    cols = {}
+    for n in names:
+        for x, y in pixels(parts[n]):
+            cols.setdefault(x, set()).add(y)
+    if not cols:
+        return
+    bottom = {x: max(ys) for x, ys in cols.items()}
+    smooth = {}
+    for x in bottom:
+        win = sorted(bottom[k] for k in range(x - 2, x + 3) if k in bottom)
+        smooth[x] = win[len(win) // 2]
+    for x in sorted(bottom):
+        for y in range(smooth[x] + 1, H):  # Zacken unterhalb der Saumlinie weg
+            for n in names:
+                parts[n][y][x] = "."
+        for y in range(max(min(cols[x]) + 1, y_from), smooth[x] + 1):  # Löcher füllen
+            if owner(x, y) is None:
+                n = owner(x, y - 1)
+                if n:
+                    fill_from(n, x, y, x, y - 1)
+    for y in range(y_from, H):  # waagerechte Lücken von 1–2 px schließen
+        row = [owner(x, y) for x in range(W)]
+        x = 0
+        while x < W:
+            if row[x] is not None:
+                x += 1
+                continue
+            x0 = x
+            while x < W and row[x] is None:
+                x += 1
+            if x0 > 0 and x < W and x - x0 <= 2 and row[x0 - 1]:
+                for k in range(x0, x):
+                    fill_from(row[x0 - 1], k, y, x0 - 1, y)
+
+    # Seitliche Zipfel: Zeilen, die außen deutlich über beide Nachbarzeilen
+    # hinausragen, auf deren Breite kürzen
+    def extent(y):
+        xs = [x for x in range(W) if owner(x, y)]
+        return (min(xs), max(xs)) if xs else None
+
+    for y in range(y_from, H - 1):
+        cur, up, down = extent(y), extent(y - 1), extent(y + 1)
+        if not cur or not up:
+            continue
+        lo = up[0] if not down else min(up[0], down[0])
+        hi = up[1] if not down else max(up[1], down[1])
+        for x in range(cur[0], lo - 1):
+            for n in names:
+                parts[n][y][x] = "."
+        for x in range(hi + 2, cur[1] + 1):
+            for n in names:
+                parts[n][y][x] = "."
+
+    # Winzige Restfetzen (< 8 Pixel, nicht mit dem Rock verbunden) entfernen
+    occ = {(x, y) for n in names for x, y in pixels(parts[n])}
+    seen = set()
+    for start in occ:
+        if start in seen:
+            continue
+        comp, stack = [], [start]
+        seen.add(start)
+        while stack:
+            x, y = stack.pop()
+            comp.append((x, y))
+            for dx, dy in N4:
+                q = (x + dx, y + dy)
+                if q in occ and q not in seen:
+                    seen.add(q)
+                    stack.append(q)
+        if len(comp) < 8:
+            for x, y in comp:
+                for n in names:
+                    parts[n][y][x] = "."
+
+
 def shift_part(g, dx, dy=0):
     out = blank()
     for x, y in pixels(g):
@@ -122,27 +213,26 @@ def build(theta_deg, sources, limb_src, order, partmap, out_path):
     for g, names in GROUPS.items():
 
         def pick(phi_deg, head=(g == "head")):
+            # Jeder sichtbare Winkel bekommt eine Quelle (sonst entstehen Lücken)
             p = (phi_deg + 180) % 360 - 180
             if head:  # Gesicht aus S, Ohr aus E, Hinterkopf aus N
-                if -72 <= p <= 45:
+                if -72 <= p <= 90:
                     return "S"
                 if -90 <= p < -72:
                     return "E"
-                if p >= 135 or p < -90:
-                    return "N"
-                return None
-            if -45 <= p <= 45:
+                return "N"
+            if -45 <= p <= 90:
                 return "S"
             if -135 <= p < -45:
                 return "E"
-            if p >= 135 or p < -135:
-                return "N"
-            return None
+            return "N"
 
         targets = sorted({partmap[v].get(n, n) for v in views for n in names} - {None})
         rotate_group(views, names, theta_deg, parts, pick, partmap)
         for t in targets:
             remove_fringes(parts[t])
+        if g == "skirt":
+            clean_hem(parts, ["skirt_front", "skirt_back"])
         outline_group(parts, targets)
 
     th = math.radians(theta_deg)

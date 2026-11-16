@@ -150,7 +150,9 @@ for y in (39, 40, 41):
 for y in range(33, 41):
     under("skirt_back", y, 25, 37, "d")
 for y in range(41, 52):
-    under("skirt_back", y, 24, 38, "R" if (y + 0) % 3 == 0 else "r")
+    for x in range(24, 39):
+        # senkrechte Stofffalten (in den Schrägansichten sichtbar)
+        under("skirt_back", y, x, x, "B" if x % 4 == 2 and y < 44 else "R" if x % 4 == 2 else "r")
 under("skirt_back", 52, 24, 38, "K")
 
 # Oberschenkel bis zur Hüfte (unter dem Rock) und ins Knie (unter dem Stiefel)

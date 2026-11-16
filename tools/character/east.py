@@ -69,31 +69,29 @@ KkddddgggK.
 """)
 
 # ------------------------------------------------------------ Arme
-def arm(upper, fore, dx=0):
-    up = ranges_to_set({y: (a + dx, b + dx) for y, (a, b) in upper.items()})
-    fo = ranges_to_set({y: (a + dx, b + dx) for y, (a, b) in fore.items()})
-    gu, gf = blank(), blank()
-    paint(gu, up, lambda x, y: "g" if x >= 31 + dx else "d")
-
-    def ffn(x, y):
-        if y >= 38:
-            return "W" if x <= 31 + dx else "s" if y == 39 else "S"
-        if y == 36:
-            return "B" if (x + dx) % 3 == 0 else "b" if x < 29 + dx else "r"
-        if x <= 27 + dx:
-            return "B"
-        return "R" if (x + y // 3) % 3 == 0 else "r"
-    paint(gf, fo, ffn)
-    return gu, gf
-
-
+# Oberarm: schwarzer Ärmel, vorne etwas heller
 UPPER = {y: (29, 33) for y in range(24, 32)}
 UPPER[23] = (30, 32)
-FORE = {31: (29, 33), 32: (28, 34), 33: (27, 34), 34: (26, 35), 35: (26, 35), 36: (26, 36),
-        37: (27, 35), 38: (30, 33), 39: (30, 33), 40: (31, 32)}
-E["upper_arm_R"], E["forearm_R"] = arm(UPPER, FORE)
-ul, fl = arm(UPPER, FORE, dx=-2)
-E["upper_arm_L"], E["forearm_L"] = darken(ul), darken(fl)
+paint(E["upper_arm_R"], ranges_to_set(UPPER), lambda x, y: "g" if x >= 31 else "d")
+
+# Unterarm: roter Glockenärmel im Profil – schmal am Ellbogen, unten weit,
+# zwei Faltenlinien (R), dunkle Rückseite (B), Rüschensaum, Hand mittig darunter.
+block(E["forearm_R"], 26, 31, """
+...KddgK....
+...KRrrK....
+..KBRrRrK...
+..KBRrrRrK..
+.KBRrrrRrK..
+.KBRrrrrRrK.
+KbBRrrrrRbK.
+.KKKKWWKKK..
+....KWSK....
+.....KK.....
+""")
+
+# Ferner (linker) Arm: gleiche Form, 2 px weiter hinten und abgedunkelt
+E["upper_arm_L"] = darken(shift(E["upper_arm_R"], -2))
+E["forearm_L"] = darken(shift(E["forearm_R"], -2))
 
 # ------------------------------------------------------------ Rock
 SK = {32: (28, 35), 33: (27, 36), 34: (27, 36), 35: (26, 37), 36: (26, 37), 37: (25, 38),
