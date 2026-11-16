@@ -4,6 +4,7 @@ import os
 import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from feet import replace_feet  # noqa: E402
 from common import (H, W, blank, block, composite, load, mirror, outline,  # noqa: E402
                     pixels, save, union)
 
@@ -15,9 +16,11 @@ HEAD = 61  # Spiegelung Kopf (Mitte x = 30.5)
 N = {p: blank() for p in P}
 
 # Gliedmaßen: gespiegelt, Namen bleiben (ihr rechter Arm ist jetzt rechts im Bild)
-for p in ("upper_arm_R", "forearm_R", "upper_arm_L", "forearm_L",
-          "thigh_R", "shin_R", "foot_R", "thigh_L", "shin_L", "foot_L"):
+for p in ("upper_arm_R", "forearm_R", "upper_arm_L", "forearm_L"):
     N[p] = mirror(P[p], BODY)
+# Beine liegen um x = 31,0 → Spiegelachse 61, damit die Füße beim Umdrehen an Ort und Stelle bleiben
+for p in ("thigh_R", "shin_R", "thigh_L", "shin_L"):
+    N[p] = mirror(P[p], 61)
 
 # Oberkörper: Rücken des Mieders (größtenteils von Haaren verdeckt)
 torso = mirror(P["torso"], BODY)
@@ -118,6 +121,9 @@ piv = {}
 for k, (x, y) in S["pivots"].items():
     axis = HEAD if k in ("head", "hair_front", "hair_back") else BODY
     piv[k] = [axis - x, y]
+
+# Von hinten sieht man die Absätze; die Spitzen zeigen vom Betrachter weg
+replace_feet(N, piv, "back", mirror_left=True)
 
 save({"pal": S["pal"], "order": N_ORDER, "pivots": piv, "parts": N}, "char/N.json")
 print("ok")

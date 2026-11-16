@@ -125,6 +125,11 @@ Füße nicht rutschen.
 - **Südost / Nordost:** Jede Körperpartie wird zeilenweise als Ellipse gedreht.
   Jedes Pixel stammt aus der Ansicht, die diese Stelle am frontalsten zeigt.
 - **West / Südwest / Nordwest:** gespiegelt (links/rechts getauscht).
+- **Füße:** Jede Richtung hat eigene Stiefel, deren Spitze in Laufrichtung zeigt:
+  in Süd zur Kamera, in Nord sieht man die Absätze, in den Schrägansichten zeigen
+  beide Spitzen schräg (`tools/character/feet.py`). In der Frontansicht steht
+  sie dafür gerade; das in der Vorlage nach außen gedrehte linke Bein ist durch
+  das gespiegelte rechte ersetzt.
 
 ![Die Vampirin in allen 8 Richtungen](art/vampire/preview_8_richtungen.png)
 

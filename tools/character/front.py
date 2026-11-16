@@ -217,3 +217,24 @@ json.dump({"pal": _d["pal"], "order": [_anatomical(k) for k in _d["order"]],
            "parts": {_anatomical(k): v for k, v in _d["parts"].items()}},
           open("char/S.json", "w"))
 print("gespeichert: char/S.json")
+
+# ------------------------------------------------------------ Füße in Laufrichtung
+# Für die Laufanimation stehen beide Füße gerade mit der Spitze zur Kamera.
+# Das linke Bein (rechts im Bild, in der Vorlage nach außen gedreht) wird
+# durch das gespiegelte rechte ersetzt; beide bekommen den Front-Stiefel.
+import os  # noqa: E402
+import sys  # noqa: E402
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from common import load, mirror, save  # noqa: E402
+from feet import replace_feet  # noqa: E402
+
+LEG_AXIS = 61  # Beine liegen symmetrisch um x = 31,0 (zwischen Pixel 30 und 31)
+_s = load("char/S.json")
+for _limb in ("thigh", "shin"):
+    _s["parts"][f"{_limb}_L"] = mirror(_s["parts"][f"{_limb}_R"], LEG_AXIS)
+    _x, _y = _s["pivots"][f"{_limb}_R"]
+    _s["pivots"][f"{_limb}_L"] = [LEG_AXIS + 1 - _x, _y]
+replace_feet(_s["parts"], _s["pivots"], "front", mirror_left=True)
+save(_s, "char/S.json")
+print("Füße: Front-Stiefel, gerader Stand")

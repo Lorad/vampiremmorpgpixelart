@@ -12,6 +12,7 @@ import sys
 
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 from common import H, W, blank, load, pixels, save  # noqa: E402
+from feet import replace_feet  # noqa: E402
 
 C0 = 31.0  # Körperachse
 N4 = ((1, 0), (-1, 0), (0, 1), (0, -1))
@@ -207,7 +208,7 @@ def shift_part(g, dx, dy=0):
     return out
 
 
-def build(theta_deg, sources, limb_src, order, partmap, out_path):
+def build(theta_deg, sources, limb_src, order, partmap, out_path, foot_kind):
     views = {k: load(f"char/{k}.json") for k in sources}
     parts = {n: blank() for n in views[sources[0]]["parts"]}
     for g, names in GROUPS.items():
@@ -249,6 +250,8 @@ def build(theta_deg, sources, limb_src, order, partmap, out_path):
             dx = round(target - px_l)
             parts[n] = shift_part(L["parts"][n], dx)
             piv[n] = [L["pivots"][n][0] + dx, L["pivots"][n][1]]
+    # Beide Stiefelspitzen zeigen in die Laufrichtung (nicht gespiegelt)
+    replace_feet(parts, piv, foot_kind)
     for k in ("root", "pelvis", "torso", "head", "hair_front", "hair_back",
               "skirt_front", "skirt_back"):
         X = L["pivots"][k][0] - C0
@@ -269,8 +272,8 @@ if __name__ == "__main__":
                 "skirt_back", "upper_arm_L", "forearm_L", "torso",
                 "upper_arm_R", "forearm_R", "hair_back", "head"]
     build(35, ["S", "E", "N"], "S", SE_ORDER,
-          {"S": {}, "N": {}, "E": {"skirt_back": None}}, "char/SE.json")
+          {"S": {}, "N": {}, "E": {"skirt_back": None}}, "char/SE.json", "se")
     build(145, ["N", "E", "S"], "N", NE_ORDER,
           {"N": {}, "S": {}, "E": {"skirt_front": "skirt_back", "skirt_back": None}},
-          "char/NE.json")
+          "char/NE.json", "ne")
     print("ok")
