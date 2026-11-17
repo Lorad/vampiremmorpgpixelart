@@ -88,11 +88,14 @@ export default class WorldScene extends Phaser.Scene {
     }
   }
 
-  /** Ganzzahliger Zoom, damit alle Pixel gleich groß bleiben (~20×12 Kacheln sichtbar). */
+  /**
+   * Ganzzahliger Zoom, damit alle Pixel gleich groß bleiben: etwa 20×12 Kacheln
+   * sichtbar, aber nie mehr als die Karte groß ist (sonst schwarze Ränder).
+   */
   updateZoom() {
     const { width, height } = this.scale.gameSize;
-    this.cameras.main.setZoom(
-      Math.max(1, Math.floor(Math.min(width / (20 * TILE), height / (12 * TILE)))),
-    );
+    const ideal = Math.round(Math.min(width / (20 * TILE), height / (12 * TILE)));
+    const fill = Math.ceil(Math.max(width / this.map.widthInPixels, height / this.map.heightInPixels));
+    this.cameras.main.setZoom(Math.max(1, ideal, fill));
   }
 }

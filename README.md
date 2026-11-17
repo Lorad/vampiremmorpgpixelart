@@ -31,6 +31,13 @@ npm run dev
 
 Dann im Browser <http://localhost:5173> öffnen.
 
+Als **eine einzige HTML-Datei** bauen, z. B. für ein claude.ai-Artefakt (Spielcode,
+Grafiken und Karte eingebettet, mit Startbildschirm):
+
+```bash
+npm run build:artifact   # → dist/vampire-vs-human.html
+```
+
 | Taste | Funktion |
 | --- | --- |
 | `W` `A` `S` `D` / Pfeiltasten | laufen |
