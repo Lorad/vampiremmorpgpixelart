@@ -137,13 +137,18 @@ function gaitPose(direction, phase, g) {
   const shiftNow = shift(p);
   const shiftBefore = shift(p - 1 / WALK_FRAMES);
 
+  // Haare federn einen Takt verzögert nach und wehen beim Laufen nach hinten.
+  // Von hinten (Nord, Nordost, Nordwest) ist die Haarmasse fast der ganze Kopf:
+  // Dort federt sie höchstens 1 px, sonst rutscht sie sichtbar am Ohr vorbei.
+  const lag = (before.pelvis + before.torso) - (now.pelvis + now.torso);
+  const hair = {
+    x: -dir * g.hairTrail + (shiftBefore - shiftNow),
+    y: (front < 0 ? Math.max(-1, Math.min(1, lag)) : lag) - Math.sign(front) * g.hairLift,
+  };
+
   const pose = {
     torso: { x: g.lean * dir + shiftNow, y: now.torso },
-    // Haare federn einen Takt verzögert nach und wehen beim Seitwärtslaufen nach hinten
-    hair_back: {
-      x: -dir * g.hairTrail + (shiftBefore - shiftNow),
-      y: (before.pelvis + before.torso) - (now.pelvis + now.torso) - Math.sign(front) * g.hairLift,
-    },
+    hair_back: hair,
     // Arme schwingen gegengleich zu den Beinen
     ...(diagonal ? diagonalArms(side, front, s, g) : straightArms(side, front, s, g)),
     ...(diagonal ? diagonalLegs(side, front, s, c, g) : straightLegs(side, front, s, c, g)),
@@ -151,6 +156,9 @@ function gaitPose(direction, phase, g) {
     skirt_front: { x: sway, y: now.pelvis <= -2 ? g.skirtFlutter : 0 },
     skirt_back: { x: sway, y: now.pelvis <= -2 ? g.skirtFlutter : 0 },
   };
+  // Von hinten liegt die Strähne am Gesichtsrand (hair_front) hinter dem Kopf
+  // und gehört zur Haarmasse: Sie muss mitgehen, sonst reißt eine Lücke auf.
+  if (front < 0) pose.hair_front = { ...hair };
   if (now.pelvis) pose.pelvis = { y: now.pelvis };
   return pose;
 }
