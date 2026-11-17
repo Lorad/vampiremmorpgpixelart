@@ -52,7 +52,7 @@ export default class WorldScene extends Phaser.Scene {
       this.cache.json.get('vampire-rig'));
 
     this.input.keyboard.on('keydown-F', () => this.scene.start('Character'));
-    setHud('WASD / Pfeiltasten: laufen · F: Figuren-Ansicht');
+    setHud('WASD / Pfeiltasten: laufen · Shift: sprinten · F: Figuren-Ansicht');
 
     // Kamera folgt der Figur (auf ganze Pixel gerundet, ohne Nachziehen = kein Zittern)
     const cam = this.cameras.main;

@@ -1,7 +1,7 @@
 import Phaser from 'phaser';
 import RiggedSprite from '../characters/RiggedSprite.js';
-import { idlePose, walkPose, WALK_FRAMES } from '../characters/animations.js';
-import { SPEED, STRIDE } from '../world/Player.js';
+import { idlePose, runPose, walkPose, WALK_FRAMES } from '../characters/animations.js';
+import { RUN_SPEED, RUN_STRIDE, SPEED, STRIDE } from '../world/Player.js';
 
 const COMPASS = [
   ['NW', 'N', 'NE'],
@@ -21,9 +21,12 @@ const PART_NAMES = {
   thigh_L: 'Oberschenkel li.', shin_L: 'Schienbein li.', foot_L: 'Fuß li.',
 };
 const CELL = 64; // Platz pro Figur (Figur ist 62×62 Pixel)
+// Gangarten der Vorschau (Leertaste schaltet weiter)
+const GAITS = ['idle', 'walk', 'run'];
+const GAIT_NAMES = { idle: 'Stehen', walk: 'Gehen', run: 'Sprinten' };
 const TEXT = { fontFamily: 'monospace', fontSize: '13px', color: '#e8dcdc' };
 
-/** Zeigt die Vampirin in allen 8 Richtungen (stehend oder laufend) und ihre Skelett-Teile. */
+/** Zeigt die Vampirin in allen 8 Richtungen (stehend, gehend, sprintend) und ihre Skelett-Teile. */
 export default class CharacterScene extends Phaser.Scene {
   constructor() {
     super('Character');
@@ -33,13 +36,14 @@ export default class CharacterScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor('#2b2430');
     this.rig = this.cache.json.get('vampire-rig');
     this.selected = this.selected ?? 'S';
-    this.walking = this.walking ?? false;
+    this.gait = this.gait ?? 'idle';
     this.showFrames = this.showFrames ?? false;
     this.figures = [];
 
     this.input.keyboard.on('keydown-F', () => this.scene.start('World'));
     this.input.keyboard.on('keydown-SPACE', () => {
-      this.walking = !this.walking;
+      this.gait = GAITS[(GAITS.indexOf(this.gait) + 1) % GAITS.length];
+      this.scene.restart();
     });
     this.input.keyboard.on('keydown-B', () => {
       this.showFrames = !this.showFrames;
@@ -58,9 +62,11 @@ export default class CharacterScene extends Phaser.Scene {
     // Ganzzahlige Vergrößerung, damit die Pixel gleich groß bleiben
     const s = Math.max(1, Math.floor(Math.min((width * 0.5) / (3 * CELL), (height - 70) / (3 * CELL + 30))));
 
-    this.add.text(16, 12, 'Vampirin – 8 Richtungen & Skelett-Teile', { ...TEXT, fontSize: '16px' });
+    this.add.text(16, 12, `Vampirin – 8 Richtungen & Skelett-Teile · ${GAIT_NAMES[this.gait]}`, {
+      ...TEXT, fontSize: '16px',
+    });
     this.add.text(16, 34,
-      'Leertaste: Laufen an/aus · B: Einzelbilder · Klick auf Figur: Teile · F: zur Welt', {
+      'Leertaste: Stehen / Gehen / Sprinten · B: Einzelbilder · Klick auf Figur: Teile · F: zur Welt', {
         ...TEXT, color: '#a99aa6',
       });
 
@@ -115,7 +121,7 @@ export default class CharacterScene extends Phaser.Scene {
     }
   }
 
-  /** Alle Einzelbilder des Laufzyklus: eine Zeile pro Richtung (W/SW/NW sind gespiegelt). */
+  /** Alle Einzelbilder des Geh- bzw. Sprintzyklus: eine Zeile pro Richtung (W/SW/NW gespiegelt). */
   createFrameStrip() {
     const rows = ['S', 'SE', 'E', 'NE', 'N'];
     const { width, height } = this.scale.gameSize;
@@ -124,8 +130,12 @@ export default class CharacterScene extends Phaser.Scene {
       (width - labelW - 32) / (WALK_FRAMES * CELL),
       (height - 80) / (rows.length * (CELL + 4)),
     )));
-    this.add.text(16, 12, 'Laufzyklus – alle Einzelbilder', { ...TEXT, fontSize: '16px' });
-    this.add.text(16, 34, 'B: zurück zur Übersicht · F: zur Welt (West-Richtungen = gespiegelt)', {
+    const running = this.gait === 'run';
+    const pose = running ? runPose : walkPose;
+    this.add.text(16, 12, `${running ? 'Sprintzyklus' : 'Gehzyklus'} – alle Einzelbilder`, {
+      ...TEXT, fontSize: '16px',
+    });
+    this.add.text(16, 34, 'Leertaste: Gangart wechseln · B: zurück zur Übersicht · F: zur Welt (West = gespiegelt)', {
       ...TEXT, color: '#a99aa6',
     });
     rows.forEach((dir, r) => {
@@ -137,7 +147,7 @@ export default class CharacterScene extends Phaser.Scene {
         const fig = new RiggedSprite(this, Math.round(cx), Math.round(top + 61 * s), 'vampire',
           this.rig, dir);
         fig.setScale(s);
-        fig.setPose(walkPose(dir, (f + 0.5) / WALK_FRAMES));
+        fig.setPose(pose(dir, (f + 0.5) / WALK_FRAMES));
         if (r === 0) {
           this.add.text(cx, 52, `Bild ${f + 1}`, { ...TEXT, fontSize: '11px', color: '#a99aa6' })
             .setOrigin(0.5, 0);
@@ -147,10 +157,12 @@ export default class CharacterScene extends Phaser.Scene {
   }
 
   update(time) {
-    // Laufen auf der Stelle: gleiche Geschwindigkeit wie im Spiel
-    const phase = (time / 1000) * (SPEED / STRIDE);
+    // Auf der Stelle laufen, im selben Tempo wie im Spiel
+    const running = this.gait === 'run';
+    const phase = (time / 1000) * (running ? RUN_SPEED / RUN_STRIDE : SPEED / STRIDE);
     for (const { fig, offset } of this.figures) {
-      fig.setPose(this.walking ? walkPose(fig.direction, phase) : idlePose(time + offset));
+      if (this.gait === 'idle') fig.setPose(idlePose(time + offset));
+      else fig.setPose((running ? runPose : walkPose)(fig.direction, phase));
     }
   }
 }
