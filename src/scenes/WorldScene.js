@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import Player from '../world/Player.js';
+import { currentCharacter, rigKey } from '../characters/roster.js';
 import { CollisionWorld } from '../world/collision.js';
 
 export const TILE = 32;
@@ -47,12 +48,14 @@ export default class WorldScene extends Phaser.Scene {
     // Kollision aus derselben Karte (Baumstämme + Wiesenrand)
     const collision = CollisionWorld.fromTiledMap(this.cache.tilemap.get('world').data);
 
-    // Die Vampirin startet auf der Wiese, nahe am nördlichen Waldrand
-    this.player = new Player(this, 17 * TILE, 9 * TILE, collision,
-      this.cache.json.get('vampire-rig'));
+    // Die gewählte Figur startet auf der Wiese, nahe am nördlichen Waldrand
+    const character = currentCharacter(this.registry);
+    this.player = new Player(this, 17 * TILE, 9 * TILE, collision, character.file,
+      this.cache.json.get(rigKey(character)), character.motion);
 
     this.input.keyboard.on('keydown-F', () => this.scene.start('Character'));
-    setHud('WASD / Pfeiltasten: laufen · Shift: sprinten · F: Figuren-Ansicht');
+    this.input.keyboard.on('keydown-ESC', () => this.scene.start('Select'));
+    setHud('WASD / Pfeiltasten: laufen · Shift: sprinten · F: Figuren-Ansicht · Esc: Figur wählen');
 
     // Kamera folgt der Figur (auf ganze Pixel gerundet, ohne Nachziehen = kein Zittern)
     const cam = this.cameras.main;

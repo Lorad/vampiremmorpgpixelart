@@ -50,7 +50,7 @@ const page = `<title>Vampire vs Human</title>
     --dusk: #1c1a22;       /* Flächen */
     --bone: #f6e9df;       /* Text: helle Haut */
     --mist: #b3a6b2;       /* Nebentext */
-    --blood: #b11c26;      /* Akzent: Augen der Vampirin */
+    --blood: #b11c26;      /* Akzent: Augen der Vampire */
     --blood-hi: #e3575e;
     --font-title: "Pirata One", "UnifrakturMaguntia", Georgia, serif;
     --font-ui: "Pixelify Sans", ui-monospace, "SFMono-Regular", Menlo, monospace;
@@ -166,15 +166,15 @@ const page = `<title>Vampire vs Human</title>
   <div class="start" id="start">
     <div class="card">
       <h1 class="title">Vampire <span class="vs">vs</span> Human</h1>
-      <p class="sub">Spielbarer Prototyp · die Vampirin · 8 Richtungen</p>
+      <p class="sub">Spielbarer Prototyp · Vampirin oder Vampir · 8 Richtungen</p>
       <dl class="keys">
         <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>laufen (oder Pfeiltasten)</dd>
         <dt><kbd>Shift</kbd></dt><dd>gedrückt halten: sprinten</dd>
+        <dt><kbd>Esc</kbd></dt><dd>zurück zur Figurenwahl</dd>
         <dt><kbd>F</kbd></dt><dd>Figuren-Ansicht ↔ Welt</dd>
-        <dt><kbd>Leertaste</kbd></dt><dd>Figuren-Ansicht: Stehen / Gehen / Sprinten</dd>
-        <dt><kbd>B</kbd></dt><dd>Figuren-Ansicht: alle Einzelbilder</dd>
+        <dt><kbd>Leertaste</kbd><kbd>B</kbd><kbd>C</kbd></dt><dd>Figuren-Ansicht: Gangart, Einzelbilder, Figur wechseln</dd>
       </dl>
-      <button class="play" id="play" type="button">Spielen</button>
+      <button class="play" id="play" type="button">Figur wählen</button>
       <p class="hint">Am PC mit Tastatur. Klicke ins Spiel, falls die Tasten nicht reagieren.</p>
     </div>
   </div>

@@ -29,9 +29,12 @@ export default class Player {
    * @param {number} x Fußpunkt x
    * @param {number} y Fußpunkt y
    * @param {import('./collision.js').CollisionWorld} collision
-   * @param {object} rigData Inhalt von vampire.rig.json
+   * @param {string} textureKey Texturatlas der Figur (z. B. 'vampire')
+   * @param {object} rigData Skelett der Figur (Inhalt von <figur>.rig.json)
+   * @param {object} [motion] Bewegungsstil der Figur (siehe characters/roster.js)
    */
-  constructor(scene, x, y, collision, rigData) {
+  constructor(scene, x, y, collision, textureKey, rigData, motion = {}) {
+    this.motion = motion;
     this.scene = scene;
     this.collision = collision;
     this.x = x;
@@ -39,7 +42,7 @@ export default class Player {
     this.phase = 0;
     this.moving = false;
     this.sprinting = false;
-    this.sprite = new RiggedSprite(scene, x, y, 'vampire', rigData, 'S');
+    this.sprite = new RiggedSprite(scene, x, y, textureKey, rigData, 'S');
     this.keys = scene.input.keyboard.addKeys({
       up: 'W', down: 'S', left: 'A', right: 'D',
       up2: 'UP', down2: 'DOWN', left2: 'LEFT', right2: 'RIGHT',
@@ -90,7 +93,7 @@ export default class Player {
 
     if (this.moving) {
       const pose = this.sprinting ? runPose : walkPose;
-      this.sprite.setPose(pose(this.sprite.direction, this.phase));
+      this.sprite.setPose(pose(this.sprite.direction, this.phase, this.motion));
     } else {
       this.phase = 0.999; // nächster Schritt beginnt wieder mit dem rechten Bein
       this.sprite.setPose(idlePose(time));

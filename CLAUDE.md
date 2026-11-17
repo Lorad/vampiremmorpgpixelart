@@ -22,4 +22,7 @@ Der Projektinhaber schreibt Deutsch – antworte auf Deutsch.
   Veröffentlicht unter https://claude.ai/artifact/CchQ6D5kyKkoVsqu83x36D – nach
   Änderungen am Spiel neu bauen und unter derselben Adresse aktualisieren.
 - Vampirin neu erzeugen: `python3 tools/character/build.py` (braucht Pillow und numpy).
+- Vampir (männlich) neu erzeugen: `python3 tools/character/build_male.py`.
+- Spielstart: Figurenwahl (`SelectScene`); `…/#welt` startet direkt in der Welt,
+  `…/#figur` in der Figuren-Ansicht. Spielbare Figuren stehen in `src/characters/roster.js`.
 - Welt neu erzeugen: `npm run generate:world` (überschreibt Karte und Grafiken).

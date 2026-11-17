@@ -2,6 +2,7 @@ import Phaser from 'phaser';
 import RiggedSprite from '../characters/RiggedSprite.js';
 import { idlePose, runPose, walkPose, WALK_FRAMES } from '../characters/animations.js';
 import { RUN_SPEED, RUN_STRIDE, SPEED, STRIDE } from '../world/Player.js';
+import { CHARACTERS, chooseCharacter, currentCharacter, rigKey } from '../characters/roster.js';
 
 const COMPASS = [
   ['NW', 'N', 'NE'],
@@ -26,7 +27,7 @@ const GAITS = ['idle', 'walk', 'run'];
 const GAIT_NAMES = { idle: 'Stehen', walk: 'Gehen', run: 'Sprinten' };
 const TEXT = { fontFamily: 'monospace', fontSize: '13px', color: '#e8dcdc' };
 
-/** Zeigt die Vampirin in allen 8 Richtungen (stehend, gehend, sprintend) und ihre Skelett-Teile. */
+/** Zeigt die gewählte Figur in allen 8 Richtungen (stehend, gehend, sprintend) und ihre Skelett-Teile. */
 export default class CharacterScene extends Phaser.Scene {
   constructor() {
     super('Character');
@@ -34,13 +35,21 @@ export default class CharacterScene extends Phaser.Scene {
 
   create() {
     this.cameras.main.setBackgroundColor('#2b2430');
-    this.rig = this.cache.json.get('vampire-rig');
+    this.character = currentCharacter(this.registry);
+    this.texture = this.character.file;
+    this.rig = this.cache.json.get(rigKey(this.character));
     this.selected = this.selected ?? 'S';
     this.gait = this.gait ?? 'idle';
     this.showFrames = this.showFrames ?? false;
     this.figures = [];
 
     this.input.keyboard.on('keydown-F', () => this.scene.start('World'));
+    this.input.keyboard.on('keydown-ESC', () => this.scene.start('Select'));
+    this.input.keyboard.on('keydown-C', () => {
+      const next = CHARACTERS[(CHARACTERS.indexOf(this.character) + 1) % CHARACTERS.length];
+      chooseCharacter(this.registry, next);
+      this.scene.restart();
+    });
     this.input.keyboard.on('keydown-SPACE', () => {
       this.gait = GAITS[(GAITS.indexOf(this.gait) + 1) % GAITS.length];
       this.scene.restart();
@@ -62,11 +71,11 @@ export default class CharacterScene extends Phaser.Scene {
     // Ganzzahlige Vergrößerung, damit die Pixel gleich groß bleiben
     const s = Math.max(1, Math.floor(Math.min((width * 0.5) / (3 * CELL), (height - 70) / (3 * CELL + 30))));
 
-    this.add.text(16, 12, `Vampirin – 8 Richtungen & Skelett-Teile · ${GAIT_NAMES[this.gait]}`, {
+    this.add.text(16, 12, `${this.character.name} – 8 Richtungen & Skelett-Teile · ${GAIT_NAMES[this.gait]}`, {
       ...TEXT, fontSize: '16px',
     });
     this.add.text(16, 34,
-      'Leertaste: Stehen / Gehen / Sprinten · B: Einzelbilder · Klick auf Figur: Teile · F: zur Welt', {
+      'Leertaste: Stehen / Gehen / Sprinten · B: Einzelbilder · C: Figur wechseln · Klick auf Figur: Teile · F: zur Welt', {
         ...TEXT, color: '#a99aa6',
       });
 
@@ -78,7 +87,7 @@ export default class CharacterScene extends Phaser.Scene {
         if (!dir) continue;
         const cx = ox + (c + 0.5) * CELL * s;
         const top = oy + r * (CELL * s + 26);
-        const fig = new RiggedSprite(this, Math.round(cx), Math.round(top + 61 * s), 'vampire',
+        const fig = new RiggedSprite(this, Math.round(cx), Math.round(top + 61 * s), this.texture,
           this.rig, dir);
         fig.setScale(s);
         this.figures.push({ fig, offset: (r * 3 + c) * 170 });
@@ -114,7 +123,7 @@ export default class CharacterScene extends Phaser.Scene {
         rowH = 0;
       }
       this.add.rectangle(x, y + 16, part.w * s, part.h * s, 0x3a3140).setOrigin(0);
-      this.add.image(x, y + 16, 'vampire', part.frame).setOrigin(0).setScale(s);
+      this.add.image(x, y + 16, this.texture, part.frame).setOrigin(0).setScale(s);
       this.add.text(x, y, PART_NAMES[name] ?? name, { ...TEXT, fontSize: '11px', color: '#c9b8c4' });
       x += w + 12;
       rowH = Math.max(rowH, h);
@@ -132,7 +141,7 @@ export default class CharacterScene extends Phaser.Scene {
     )));
     const running = this.gait === 'run';
     const pose = running ? runPose : walkPose;
-    this.add.text(16, 12, `${running ? 'Sprintzyklus' : 'Gehzyklus'} – alle Einzelbilder`, {
+    this.add.text(16, 12, `${this.character.name}: ${running ? 'Sprintzyklus' : 'Gehzyklus'} – alle Einzelbilder`, {
       ...TEXT, fontSize: '16px',
     });
     this.add.text(16, 34, 'Leertaste: Gangart wechseln · B: zurück zur Übersicht · F: zur Welt (West = gespiegelt)', {
@@ -144,10 +153,10 @@ export default class CharacterScene extends Phaser.Scene {
       for (let f = 0; f < WALK_FRAMES; f++) {
         const cx = labelW + 16 + (f + 0.5) * CELL * s;
         this.add.rectangle(cx, top + (CELL * s) / 2, CELL * s - 4, CELL * s - 4, 0x332a39);
-        const fig = new RiggedSprite(this, Math.round(cx), Math.round(top + 61 * s), 'vampire',
+        const fig = new RiggedSprite(this, Math.round(cx), Math.round(top + 61 * s), this.texture,
           this.rig, dir);
         fig.setScale(s);
-        fig.setPose(pose(dir, (f + 0.5) / WALK_FRAMES));
+        fig.setPose(pose(dir, (f + 0.5) / WALK_FRAMES, this.character.motion));
         if (r === 0) {
           this.add.text(cx, 52, `Bild ${f + 1}`, { ...TEXT, fontSize: '11px', color: '#a99aa6' })
             .setOrigin(0.5, 0);
@@ -162,7 +171,7 @@ export default class CharacterScene extends Phaser.Scene {
     const phase = (time / 1000) * (running ? RUN_SPEED / RUN_STRIDE : SPEED / STRIDE);
     for (const { fig, offset } of this.figures) {
       if (this.gait === 'idle') fig.setPose(idlePose(time + offset));
-      else fig.setPose((running ? runPose : walkPose)(fig.direction, phase));
+      else fig.setPose((running ? runPose : walkPose)(fig.direction, phase, this.character.motion));
     }
   }
 }

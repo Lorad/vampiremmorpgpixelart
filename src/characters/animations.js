@@ -7,6 +7,10 @@
  *
  * Gehen und Sprinten sind zwei "Gangarten" mit derselben Bewegungslogik und
  * unterschiedlichen Werten (siehe WALK und RUN).
+ *
+ * `style` passt die Bewegung an eine Figur an (siehe characters/roster.js):
+ * style.hair = wie stark die Haare nachschwingen (1 = lange Haare der
+ * Vampirin, 0 = kurze Haare, die fest am Kopf sitzen).
  */
 
 const TAU = Math.PI * 2;
@@ -112,16 +116,16 @@ function bounce(phase, gait) {
 }
 
 /** Gehen. `phase` läuft von 0 bis 1 (2 Schritte); bei 0,25 ist das rechte Bein vorne. */
-export function walkPose(direction, phase) {
-  return gaitPose(direction, phase, WALK);
+export function walkPose(direction, phase, style) {
+  return gaitPose(direction, phase, WALK, style);
 }
 
 /** Sprinten (gleiche Phase wie beim Gehen, damit der Wechsel nahtlos ist). */
-export function runPose(direction, phase) {
-  return gaitPose(direction, phase, RUN);
+export function runPose(direction, phase, style) {
+  return gaitPose(direction, phase, RUN, style);
 }
 
-function gaitPose(direction, phase, g) {
+function gaitPose(direction, phase, g, style = {}) {
   const { side, front } = VIEW[direction];
   const p = Math.floor((((phase % 1) + 1) % 1) * WALK_FRAMES) / WALK_FRAMES;
   const s = Math.sin(p * TAU); // > 0: rechtes Bein vorne
@@ -141,9 +145,10 @@ function gaitPose(direction, phase, g) {
   // Von hinten (Nord, Nordost, Nordwest) ist die Haarmasse fast der ganze Kopf:
   // Dort federt sie höchstens 1 px, sonst rutscht sie sichtbar am Ohr vorbei.
   const lag = (before.pelvis + before.torso) - (now.pelvis + now.torso);
+  const flex = style.hair ?? 1;
   const hair = {
-    x: -dir * g.hairTrail + (shiftBefore - shiftNow),
-    y: (front < 0 ? Math.max(-1, Math.min(1, lag)) : lag) - Math.sign(front) * g.hairLift,
+    x: Math.round(flex * (-dir * g.hairTrail + (shiftBefore - shiftNow))),
+    y: Math.round(flex * ((front < 0 ? Math.max(-1, Math.min(1, lag)) : lag) - Math.sign(front) * g.hairLift)),
   };
 
   const pose = {

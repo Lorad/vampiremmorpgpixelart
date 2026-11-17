@@ -1,5 +1,6 @@
 import Phaser from 'phaser';
 import PreloadScene from './scenes/PreloadScene.js';
+import SelectScene from './scenes/SelectScene.js';
 import WorldScene from './scenes/WorldScene.js';
 import CharacterScene from './scenes/CharacterScene.js';
 
@@ -11,7 +12,7 @@ const game = new Phaser.Game({
   scale: {
     mode: Phaser.Scale.RESIZE, // Spielfläche = ganzes Browserfenster
   },
-  scene: [PreloadScene, WorldScene, CharacterScene],
+  scene: [PreloadScene, SelectScene, WorldScene, CharacterScene],
 });
 
 // Nur beim Entwickeln: Zugriff für automatische Tests

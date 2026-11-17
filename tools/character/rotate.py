@@ -208,8 +208,9 @@ def shift_part(g, dx, dy=0):
     return out
 
 
-def build(theta_deg, sources, limb_src, order, partmap, out_path, foot_kind):
-    views = {k: load(f"char/{k}.json") for k in sources}
+def build(theta_deg, sources, limb_src, order, partmap, out_path, foot_kind, views=None):
+    """views: bereits geladene (z. B. vorbereitete) Quellansichten; sonst aus char/."""
+    views = views or {k: load(f"char/{k}.json") for k in sources}
     parts = {n: blank() for n in views[sources[0]]["parts"]}
     for g, names in GROUPS.items():
 
