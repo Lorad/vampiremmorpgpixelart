@@ -169,8 +169,9 @@ const page = `<title>Vampire vs Human</title>
       <p class="sub">Spielbarer Prototyp · die Vampirin · 8 Richtungen</p>
       <dl class="keys">
         <dt><kbd>W</kbd><kbd>A</kbd><kbd>S</kbd><kbd>D</kbd></dt><dd>laufen (oder Pfeiltasten)</dd>
+        <dt><kbd>Shift</kbd></dt><dd>gedrückt halten: sprinten</dd>
         <dt><kbd>F</kbd></dt><dd>Figuren-Ansicht ↔ Welt</dd>
-        <dt><kbd>Leertaste</kbd></dt><dd>Figuren-Ansicht: Laufen an/aus</dd>
+        <dt><kbd>Leertaste</kbd></dt><dd>Figuren-Ansicht: Stehen / Gehen / Sprinten</dd>
         <dt><kbd>B</kbd></dt><dd>Figuren-Ansicht: alle Einzelbilder</dd>
       </dl>
       <button class="play" id="play" type="button">Spielen</button>

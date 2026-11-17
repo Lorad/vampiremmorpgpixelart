@@ -5,6 +5,7 @@ Ein Pixel-Art-MMORPG im Browser: **Vampire gegen Menschen**, in 3/4-Ansicht
 Gespielt wird am PC im Browser mit der Tastatur.
 
 ![Die Vampirin läuft in allen 8 Richtungen](art/vampire/laufzyklus_8_richtungen.gif)
+![Die Vampirin sprintet in allen 8 Richtungen](art/vampire/sprintzyklus_8_richtungen.gif)
 
 ## Stand
 
@@ -15,7 +16,7 @@ Gespielt wird am PC im Browser mit der Tastatur.
 - **Vampirin:** aus dem Referenzbild rekonstruiert (62×62 px, 18 Farben),
   zerlegt in 16 Skelett-Teile, in allen **8 Himmelsrichtungen**.
 - **Steuerung:** Laufen mit WASD oder Pfeiltasten in 8 Richtungen (schräg nicht
-  schneller), die Figur dreht sich in Laufrichtung. Baumstämme und der Waldrand
+  schneller), mit gedrückter Shift-Taste sprinten. Die Figur dreht sich in Laufrichtung. Baumstämme und der Waldrand
   blockieren, an Ecken gleitet sie vorbei. Die Kamera folgt.
 - **Animation:** Laufzyklus aus 8 Bildern über das Skelett (Arme und Beine
   schwingen, Körper federt, Rock und Haare schwingen mit), im Stehen ruhiges
@@ -41,9 +42,10 @@ npm run build:artifact   # → dist/vampire-vs-human.html
 | Taste | Funktion |
 | --- | --- |
 | `W` `A` `S` `D` / Pfeiltasten | laufen |
+| `Shift` (gedrückt halten) | sprinten |
 | `F` | Figuren-Ansicht ↔ Welt (direkt: <http://localhost:5173/#figur>) |
-| `Leertaste` (Figuren-Ansicht) | Laufen an/aus |
-| `B` (Figuren-Ansicht) | alle Einzelbilder des Laufzyklus |
+| `Leertaste` (Figuren-Ansicht) | Stehen / Gehen / Sprinten |
+| `B` (Figuren-Ansicht) | alle Einzelbilder des Geh- bzw. Sprintzyklus |
 
 ## Projektaufbau
 
@@ -126,6 +128,13 @@ Bilder für den Pixel-Look). Je nach Richtung wird gemischt:
 Dazu federt der Körper 1 px, die Haare federn einen Takt verzögert nach und
 der Rock schwingt mit. Die Schrittlänge passt zur Laufgeschwindigkeit, damit die
 Füße nicht rutschen.
+
+**Sprinten** (`runPose`, mit Shift) nutzt dieselbe Logik mit anderen Werten:
+140 statt 80 px/s, weitere Schritte, Oberkörper nach vorne geneigt, Arme
+angewinkelt, eine Flugphase (der ganze Körper hebt zwischen zwei Schritten kurz
+ab) und stärker wehende Haare. Nach hinten schwingen die Beine weniger weit als
+nach vorne, damit sie nicht hinten aus dem langen Rock herausstechen. Gehen und
+Sprinten teilen sich die Phase, der Wechsel ist dadurch nahtlos.
 
 ### Wie die 8 Richtungen entstehen
 

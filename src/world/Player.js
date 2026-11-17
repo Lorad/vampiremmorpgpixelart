@@ -1,10 +1,13 @@
 import RiggedSprite from '../characters/RiggedSprite.js';
-import { idlePose, walkPose } from '../characters/animations.js';
+import { idlePose, runPose, walkPose } from '../characters/animations.js';
 
 /** Laufgeschwindigkeit in Pixeln pro Sekunde (≈ 2,5 Kacheln/s). */
 export const SPEED = 80;
 /** Weg in Pixeln für einen ganzen Laufzyklus (2 Schritte) – passt zur Schrittweite. */
 export const STRIDE = 40;
+/** Sprinten mit gedrückter Shift-Taste: schneller und mit weiteren Schritten. */
+export const RUN_SPEED = 140;
+export const RUN_STRIDE = 56;
 
 // Bewegungswinkel → Blickrichtung (8 Sektoren à 45°, 0° = rechts, y zeigt nach unten)
 const SECTORS = ['E', 'SE', 'S', 'SW', 'W', 'NW', 'N', 'NE'];
@@ -16,8 +19,9 @@ export function directionFor(dx, dy) {
 }
 
 /**
- * Die eigene Spielfigur: liest WASD/Pfeiltasten, bewegt sich mit Kollision,
- * dreht sich in Laufrichtung und spielt Lauf- bzw. Atem-Animation.
+ * Die eigene Spielfigur: liest WASD/Pfeiltasten (Shift = sprinten), bewegt sich
+ * mit Kollision, dreht sich in Laufrichtung und spielt Geh-, Sprint- bzw.
+ * Atem-Animation.
  */
 export default class Player {
   /**
@@ -34,10 +38,12 @@ export default class Player {
     this.y = y;
     this.phase = 0;
     this.moving = false;
+    this.sprinting = false;
     this.sprite = new RiggedSprite(scene, x, y, 'vampire', rigData, 'S');
     this.keys = scene.input.keyboard.addKeys({
       up: 'W', down: 'S', left: 'A', right: 'D',
       up2: 'UP', down2: 'DOWN', left2: 'LEFT', right2: 'RIGHT',
+      sprint: 'SHIFT', // linke und rechte Shift-Taste
     });
     this.sync();
   }
@@ -59,11 +65,14 @@ export default class Player {
     const raw = this.scene.game.loop.rawDelta;
     const dt = Math.min(Math.max(raw, 0), 100) / 1000;
     this.moving = false;
+    this.sprinting = this.keys.sprint.isDown;
+    const speed = this.sprinting ? RUN_SPEED : SPEED;
+    const stride = this.sprinting ? RUN_STRIDE : STRIDE;
 
     if (input.x || input.y) {
       const len = Math.hypot(input.x, input.y); // diagonal nicht schneller
-      const dx = (input.x / len) * SPEED * dt;
-      const dy = (input.y / len) * SPEED * dt;
+      const dx = (input.x / len) * speed * dt;
+      const dy = (input.y / len) * speed * dt;
       this.sprite.setDirection(this.facing(directionFor(input.x, input.y), time));
 
       const next = this.collision.move(this.x, this.y, dx, dy);
@@ -72,14 +81,16 @@ export default class Player {
       this.y = next.y;
       if (moved > 0.01) {
         this.moving = true;
-        this.phase = (this.phase + moved / STRIDE) % 1;
+        // gleiche Phase für Gehen und Sprinten → nahtloser Wechsel
+        this.phase = (this.phase + moved / stride) % 1;
       }
     }
 
     if (!input.x && !input.y) this.holdSince = null;
 
     if (this.moving) {
-      this.sprite.setPose(walkPose(this.sprite.direction, this.phase));
+      const pose = this.sprinting ? runPose : walkPose;
+      this.sprite.setPose(pose(this.sprite.direction, this.phase));
     } else {
       this.phase = 0.999; // nächster Schritt beginnt wieder mit dem rechten Bein
       this.sprite.setPose(idlePose(time));
