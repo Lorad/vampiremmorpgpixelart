@@ -44,21 +44,36 @@ const WALK = {
   handRaise: 0, // Hände dauerhaft höher (px, Front-/Schrägansicht)
   diagArm: { x: 2, y: 1.6 },
   lean: 0, // Oberkörper in Laufrichtung geneigt (px)
-  hairTrail: 1, // Haare wehen nach hinten (px)
+  hairTrail: 1, // Haare wehen nach hinten (px, Seitenansicht)
+  hairLift: 0, // Haare wehen nach hinten (px, Front-/Rück-/Schrägansicht)
   sway: 0.8, // Rock schwingt seitlich (px)
+  flight: 0, // Flugphase: so weit hebt der ganze Körper ab (px)
+  skirtFlutter: 0, // Rock bleibt in der Flugphase zurück (px)
+  pump: 1, // vordere Hand zieht hoch (px, Front-/Rück-/Schrägansicht)
+  backHand: 0, // hintere Hand geht nach unten (px)
+  inward: 0, // vordere Hand geht zur Körpermitte (px, Front-/Rückansicht)
+  shoulderLift: 0, // Schulter des vorderen Arms hebt sich mit (px)
+  diagPump: 0, // Schrägansicht: vordere Hand zieht hoch (px)
+  armDiagY: 1, // Schrägansicht: Hand folgt der Diagonale auch in der Höhe (1) oder nicht (0)
+  twist: 0, // Front-/Rückansicht: vorderer Unterarm dreht zur Körpermitte (Grad)
+  backOut: 0, // Front-/Rückansicht: hintere Hand geht nach außen (px)
+  bodySway: 0, // Front-/Rückansicht: Oberkörper verlagert sich über das Standbein (px)
   run: false,
 };
 
 /**
  * Sprinten: weite Schritte, angewinkelte Arme, Oberkörper nach vorne geneigt,
  * mit Flugphase (der ganze Körper hebt zwischen zwei Schritten kurz ab).
+ * Damit der Sprint auch von vorne/hinten und schräg deutlich anders aussieht:
+ * hohe Knie, die vordere Hand zieht angewinkelt vor die Brust, der Oberkörper
+ * verlagert sich über das Standbein, Haare und Rock schwingen nach.
  */
 const RUN = {
   legSwing: 32,
   legBack: 16, // nach hinten weniger, sonst sticht das Bein hinten aus dem Rock
   knee: 40,
-  frontStep: 2.2,
-  lift: 2,
+  frontStep: 2.6,
+  lift: 3, // hohe Knie
   diagStep: { x: 3, y: 2.4 },
   armSwing: 30,
   elbow: 40,
@@ -67,20 +82,33 @@ const RUN = {
   diagArm: { x: 3, y: 2.4 },
   lean: 1,
   hairTrail: 2,
-  sway: 1.4,
+  hairLift: 1,
+  sway: 1.6,
+  flight: 2,
+  skirtFlutter: 1,
+  pump: 4,
+  backHand: 1,
+  inward: 2,
+  shoulderLift: 1,
+  diagPump: 3, // die Hand pumpt senkrecht hoch …
+  armDiagY: 0, // … statt der Diagonale nach unten zu folgen
+  twist: 25,
+  backOut: 1,
+  bodySway: 1,
   run: true,
 };
 
 /**
  * Höhe von Becken und Oberkörper im Zyklus.
  * Gehen: Oberkörper 1 px tiefer, wenn die Beine weit auseinander stehen.
- * Sprinten: Flugphase (Becken 1 px höher) bei weit gestellten Beinen,
- * beim Aufsetzen federt der Oberkörper 1 px ein.
+ * Sprinten: Flugphase – der ganze Körper hebt sich in einem weichen Bogen
+ * (bis `flight` px) bei weit gestellten Beinen, beim Aufsetzen federt der
+ * Oberkörper 1 px ein.
  */
 function bounce(phase, gait) {
   const a = Math.abs(Math.sin(phase * TAU));
   if (!gait.run) return { pelvis: 0, torso: a > 0.9 ? 1 : 0 };
-  return { pelvis: a > 0.9 ? -1 : 0, torso: a < 0.3 ? 1 : 0 };
+  return { pelvis: -Math.round(gait.flight * a * a), torso: a < 0.3 ? 1 : 0 };
 }
 
 /** Gehen. `phase` läuft von 0 bis 1 (2 Schritte); bei 0,25 ist das rechte Bein vorne. */
@@ -104,20 +132,24 @@ function gaitPose(direction, phase, g) {
   const now = bounce(p, g);
   const before = bounce(p - 1 / WALK_FRAMES, g);
   const sway = Math.round(g.sway * s);
+  // Front-/Rückansicht: Oberkörper über das Standbein (rechtes Bein ist in Süd links im Bild)
+  const shift = (q) => (side === 0 ? -front * Math.round(g.bodySway * Math.sin(q * TAU)) : 0);
+  const shiftNow = shift(p);
+  const shiftBefore = shift(p - 1 / WALK_FRAMES);
 
   const pose = {
-    torso: { x: g.lean * dir, y: now.torso },
+    torso: { x: g.lean * dir + shiftNow, y: now.torso },
     // Haare federn einen Takt verzögert nach und wehen beim Seitwärtslaufen nach hinten
     hair_back: {
-      x: -dir * g.hairTrail,
-      y: (before.pelvis + before.torso) - (now.pelvis + now.torso),
+      x: -dir * g.hairTrail + (shiftBefore - shiftNow),
+      y: (before.pelvis + before.torso) - (now.pelvis + now.torso) - Math.sign(front) * g.hairLift,
     },
     // Arme schwingen gegengleich zu den Beinen
     ...(diagonal ? diagonalArms(side, front, s, g) : straightArms(side, front, s, g)),
     ...(diagonal ? diagonalLegs(side, front, s, c, g) : straightLegs(side, front, s, c, g)),
-    // Der Rock schwingt mit den Schritten
-    skirt_front: { x: sway },
-    skirt_back: { x: sway },
+    // Der Rock schwingt mit den Schritten und bleibt in der Flugphase etwas zurück
+    skirt_front: { x: sway, y: now.pelvis <= -2 ? g.skirtFlutter : 0 },
+    skirt_back: { x: sway, y: now.pelvis <= -2 ? g.skirtFlutter : 0 },
   };
   if (now.pelvis) pose.pelvis = { y: now.pelvis };
   return pose;
@@ -129,18 +161,25 @@ function gaitPose(direction, phase, g) {
  * angewinkelt). In Front-/Rückansicht hebt sich die Hand beim Vorschwingen.
  */
 function straightArms(side, front, s, g) {
-  const raised = (forward) => (front !== 0 ? -g.handRaise - (forward ? 1 : 0) : 0);
+  // Front-/Rückansicht: vordere Hand zieht im Bogen hoch (beim Sprinten auch
+  // zur Körpermitte, der Unterarm dreht dabei ein = angewinkelter Arm vor der
+  // Brust), hintere Hand geht nach unten und außen. Der rechte Arm ist im Bild
+  // links (Süd) bzw. rechts (Nord) – "zur Mitte" ist also ±front.
+  // forward: +1 = Arm ganz vorne, -1 = ganz hinten
+  const hand = (forward, inward) => (front === 0 ? {} : {
+    angle: -inward * g.twist * Math.max(0, forward),
+    x: (Math.round(g.inward * Math.max(0, forward)) - Math.round(g.backOut * Math.max(0, -forward))) * inward,
+    y: -g.handRaise - Math.round(g.pump * Math.max(0, forward))
+      + Math.round(g.backHand * Math.max(0, -forward)),
+  });
+  const shoulder = (forward) => (front === 0 ? 0 : -Math.round(g.shoulderLift * Math.max(0, forward)));
+  const inward = Math.sign(front);
   return {
-    upper_arm_R: { angle: side * g.armSwing * s },
-    forearm_R: {
-      angle: -side * (g.elbow + g.elbowSwing * Math.max(0, -s)),
-      y: raised(s < -0.7),
-    },
-    upper_arm_L: { angle: -side * g.armSwing * s },
-    forearm_L: {
-      angle: -side * (g.elbow + g.elbowSwing * Math.max(0, s)),
-      y: raised(s > 0.7),
-    },
+    // rechter Arm ist vorne, wenn das linke Bein vorne ist (s < 0)
+    upper_arm_R: { angle: side * g.armSwing * s, y: shoulder(-s) },
+    forearm_R: { angle: -side * (g.elbow + g.elbowSwing * Math.max(0, -s)), ...hand(-s, inward) },
+    upper_arm_L: { angle: -side * g.armSwing * s, y: shoulder(s) },
+    forearm_L: { angle: -side * (g.elbow + g.elbowSwing * Math.max(0, s)), ...hand(s, -inward) },
   };
 }
 
@@ -164,11 +203,20 @@ function diagonalStep(side, front, size) {
  * an ihrem Platz bleibt. Ohne Drehung bleiben die Ärmel pixelgenau.
  */
 function diagonalArms(side, front, s, g) {
-  const step = diagonalStep(side, front, g.diagArm);
+  const toRight = Math.sign(side); // +1: vorne ist im Bild rechts
+  const toCamera = Math.sign(front); // +1: vorne ist im Bild unten
   const arm = (amount) => {
-    const hand = step(amount);
-    const elbow = step(amount / 2);
-    return [elbow, { x: hand.x - elbow.x, y: hand.y - elbow.y - g.handRaise }];
+    const along = (part) => ({
+      x: Math.round(g.diagArm.x * amount * part) * toRight,
+      y: g.armDiagY * Math.round(g.diagArm.y * amount * part) * toCamera,
+    });
+    const elbow = along(0.5);
+    const hand = along(1);
+    // Sprinten: vordere Hand pumpt hoch, hintere geht nach unten
+    elbow.y -= Math.round(g.shoulderLift * Math.max(0, amount));
+    hand.y += -g.handRaise - Math.round(g.diagPump * Math.max(0, amount))
+      + Math.round(g.backHand * Math.max(0, -amount));
+    return [elbow, { x: hand.x - elbow.x, y: hand.y - elbow.y }];
   };
   const [upperR, foreR] = arm(-s); // rechter Arm ist vorne, wenn das linke Bein vorne ist
   const [upperL, foreL] = arm(s);
