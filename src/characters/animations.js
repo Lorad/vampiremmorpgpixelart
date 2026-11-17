@@ -50,15 +50,57 @@ export function walkPose(direction, phase) {
     // Haare federn einen Takt verzögert nach und wehen beim Seitwärtslaufen nach hinten
     hair_back: { x: -dir, y: bob(p - 1 / WALK_FRAMES) - torso },
     // Arme schwingen gegengleich zu den Beinen
-    upper_arm_R: { angle: side * 18 * s },
-    forearm_R: { angle: -side * 12 * Math.max(0, -s), y: front !== 0 && s < -0.7 ? -1 : 0 },
-    upper_arm_L: { angle: -side * 18 * s },
-    forearm_L: { angle: -side * 12 * Math.max(0, s), y: front !== 0 && s > 0.7 ? -1 : 0 },
+    ...(diagonal ? diagonalArms(side, front, s) : straightArms(side, front, s)),
     ...(diagonal ? diagonalLegs(side, front, s, c) : straightLegs(side, front, s, c)),
     // Der Rock schwingt mit den Schritten
     skirt_front: { x: sway },
     skirt_back: { x: sway },
   };
+}
+
+/**
+ * Arme geradeaus: In der Seitenansicht (Ost/West) pendeln sie an der Schulter,
+ * der Unterarm knickt beim Vorschwingen leicht ein. In Front-/Rückansicht hebt
+ * sich die Hand beim Vorschwingen um 1 Pixel.
+ */
+function straightArms(side, front, s) {
+  return {
+    upper_arm_R: { angle: side * 18 * s },
+    forearm_R: { angle: -side * 12 * Math.max(0, -s), y: front !== 0 && s < -0.7 ? -1 : 0 },
+    upper_arm_L: { angle: -side * 18 * s },
+    forearm_L: { angle: -side * 12 * Math.max(0, s), y: front !== 0 && s > 0.7 ? -1 : 0 },
+  };
+}
+
+/**
+ * Schritt entlang der Laufrichtung im Bild für die Schrägansichten.
+ * amount: +1 = ganz vorne, -1 = ganz hinten → bis zu 2 px seitlich und 2 px in die Tiefe.
+ */
+function diagonalStep(side, front) {
+  const toRight = Math.sign(side); // +1: vorne ist im Bild rechts
+  const toCamera = Math.sign(front); // +1: vorne ist im Bild unten
+  return (amount) => ({
+    x: Math.round(2 * amount) * toRight,
+    y: Math.round(1.6 * amount) * toCamera,
+  });
+}
+
+/**
+ * Arme schräg: Statt seitlich an der Schulter zu pendeln, schwingen Unterarm
+ * und Hand entlang der Laufrichtung vor und zurück (bei Südost nach rechts
+ * unten bzw. links oben). Der Oberarm geht nur halb mit, damit die Schulter
+ * an ihrem Platz bleibt. Ohne Drehung bleiben die Ärmel pixelgenau.
+ */
+function diagonalArms(side, front, s) {
+  const step = diagonalStep(side, front);
+  const arm = (amount) => {
+    const hand = step(amount);
+    const elbow = step(amount / 2);
+    return [elbow, { x: hand.x - elbow.x, y: hand.y - elbow.y }];
+  };
+  const [upperR, foreR] = arm(-s); // rechter Arm ist vorne, wenn das linke Bein vorne ist
+  const [upperL, foreL] = arm(s);
+  return { upper_arm_R: upperR, forearm_R: foreR, upper_arm_L: upperL, forearm_L: foreL };
 }
 
 /**
@@ -91,12 +133,7 @@ function straightLegs(side, front, s, c) {
  * Ohne Drehung bleiben die Füße exakt in ihrer Richtung und pixelgenau.
  */
 function diagonalLegs(side, front, s, c) {
-  const toRight = Math.sign(side); // +1: Schritt nach vorne geht im Bild nach rechts
-  const toCamera = Math.sign(front); // +1: Schritt nach vorne geht im Bild nach unten
-  const step = (amount) => ({
-    x: Math.round(2 * amount) * toRight,
-    y: Math.round(1.6 * amount) * toCamera,
-  });
+  const step = diagonalStep(side, front);
   // Der Oberschenkel geht nur halb mit (sonst blitzt im Rockschlitz viel Haut
   // auf), Schienbein und Stiefel machen den Rest des Schritts.
   const leg = (amount, lift) => {

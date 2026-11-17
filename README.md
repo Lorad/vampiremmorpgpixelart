@@ -120,7 +120,8 @@ Bilder für den Pixel-Look). Je nach Richtung wird gemischt:
   entlang der Laufrichtung vor- und zurückgesetzt (bei Südost nach rechts unten
   bzw. links oben) und beim Durchschwingen angehoben. Der Oberschenkel geht nur
   halb mit, Schienbein und Stiefel den Rest, damit im Rockschlitz nicht zu viel
-  Haut aufblitzt.
+  Haut aufblitzt. Die Arme schwingen genauso entlang der Laufrichtung (gegengleich
+  zu den Beinen); der Oberarm geht nur 1 px mit, damit die Schulter an ihrem Platz bleibt.
 
 Dazu federt der Körper 1 px, die Haare federn einen Takt verzögert nach und
 der Rock schwingt mit. Die Schrittlänge passt zur Laufgeschwindigkeit, damit die
