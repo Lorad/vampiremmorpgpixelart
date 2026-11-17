@@ -130,11 +130,22 @@ der Rock schwingt mit. Die Schrittlänge passt zur Laufgeschwindigkeit, damit di
 Füße nicht rutschen.
 
 **Sprinten** (`runPose`, mit Shift) nutzt dieselbe Logik mit anderen Werten:
-140 statt 80 px/s, weitere Schritte, Oberkörper nach vorne geneigt, Arme
-angewinkelt, eine Flugphase (der ganze Körper hebt zwischen zwei Schritten kurz
-ab) und stärker wehende Haare. Nach hinten schwingen die Beine weniger weit als
-nach vorne, damit sie nicht hinten aus dem langen Rock herausstechen. Gehen und
-Sprinten teilen sich die Phase, der Wechsel ist dadurch nahtlos.
+140 statt 80 px/s und weitere Schritte. In allen 8 Richtungen gilt:
+
+- **Flugphase:** Der ganze Körper hebt zwischen zwei Schritten in einem weichen
+  Bogen bis zu 2 px ab. Beim Aufsetzen federt der Oberkörper ein, der Rock
+  bleibt in der Luft kurz zurück.
+- **Hohe Knie:** Der durchschwingende Fuß wird 3 px angehoben (Gehen: 1 px).
+- **Pumpende Arme:** Die vordere Hand zieht kräftig hoch, die hintere geht nach
+  unten. Von vorne/hinten dreht der Unterarm dabei zur Körpermitte, wie ein
+  angewinkelter Arm vor der Brust. Schräg pumpt die Hand senkrecht.
+- **Gewichtsverlagerung:** Von vorne/hinten verlagert sich der Oberkörper über
+  das Standbein, die Haare schwingen einen Takt verzögert nach.
+- **Seitlich:** Oberkörper nach vorne geneigt, Arme angewinkelt, die Haare
+  wehen nach hinten. Nach hinten schwingen die Beine weniger weit als nach vorne,
+  damit sie nicht aus dem langen Rock herausstechen.
+
+Gehen und Sprinten teilen sich die Phase, der Wechsel ist dadurch nahtlos.
 
 ### Wie die 8 Richtungen entstehen
 
