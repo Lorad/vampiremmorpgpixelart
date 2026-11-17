@@ -116,7 +116,11 @@ Bilder für den Pixel-Look). Je nach Richtung wird gemischt:
   das Knie knickt beim Durchschwingen ein.
 - **Front/Rücken (Süd/Nord):** Die Füße werden vor und zurück gesetzt
   (im Bild tiefer/höher) und kurz angehoben.
-- **schräg:** eine Mischung aus beidem.
+- **schräg (Südost, Südwest, Nordost, Nordwest):** Die Beine werden ohne Drehung
+  entlang der Laufrichtung vor- und zurückgesetzt (bei Südost nach rechts unten
+  bzw. links oben) und beim Durchschwingen angehoben. Der Oberschenkel geht nur
+  halb mit, Schienbein und Stiefel den Rest, damit im Rockschlitz nicht zu viel
+  Haut aufblitzt.
 
 Dazu federt der Körper 1 px, die Haare federn einen Takt verzögert nach und
 der Rock schwingt mit. Die Schrittlänge passt zur Laufgeschwindigkeit, damit die

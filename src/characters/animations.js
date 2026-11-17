@@ -40,17 +40,7 @@ export function walkPose(direction, phase) {
   const s = Math.sin(p * TAU); // > 0: rechtes Bein vorne
   const c = Math.cos(p * TAU); // > 0: rechtes Bein schwingt gerade nach vorne
   const dir = Math.sign(side);
-  const sideAmount = Math.abs(side);
-
-  // Beine: in der Seitenansicht schwingen sie (Drehung an der Hüfte, Knie
-  // knickt beim Durchschwingen ein), in Front-/Rückansicht wird der Fuß
-  // nach vorne/hinten gesetzt (im Bild tiefer/höher) und kurz angehoben.
-  const thighR = -side * 22 * s;
-  const thighL = side * 22 * s;
-  const shinR = dir * sideAmount * 30 * Math.max(0, c);
-  const shinL = dir * sideAmount * 30 * Math.max(0, -c);
-  const stepR = Math.round(front * 1.4 * s) - (front !== 0 && c > 0.5 ? 1 : 0);
-  const stepL = Math.round(-front * 1.4 * s) - (front !== 0 && c < -0.5 ? 1 : 0);
+  const diagonal = side !== 0 && front !== 0;
 
   const torso = bob(p);
   const sway = Math.round(0.8 * s);
@@ -64,16 +54,59 @@ export function walkPose(direction, phase) {
     forearm_R: { angle: -side * 12 * Math.max(0, -s), y: front !== 0 && s < -0.7 ? -1 : 0 },
     upper_arm_L: { angle: -side * 18 * s },
     forearm_L: { angle: -side * 12 * Math.max(0, s), y: front !== 0 && s > 0.7 ? -1 : 0 },
+    ...(diagonal ? diagonalLegs(side, front, s, c) : straightLegs(side, front, s, c)),
+    // Der Rock schwingt mit den Schritten
+    skirt_front: { x: sway },
+    skirt_back: { x: sway },
+  };
+}
+
+/**
+ * Beine geradeaus: In der Seitenansicht (Ost/West) schwingen sie an der Hüfte
+ * und das Knie knickt beim Durchschwingen ein. In Front-/Rückansicht wird der
+ * Fuß nach vorne/hinten gesetzt (im Bild tiefer/höher) und kurz angehoben.
+ */
+function straightLegs(side, front, s, c) {
+  const thighR = -side * 22 * s;
+  const thighL = side * 22 * s;
+  const shinR = side * 30 * Math.max(0, c);
+  const shinL = side * 30 * Math.max(0, -c);
+  const stepR = Math.round(front * 1.4 * s) - (front !== 0 && c > 0.5 ? 1 : 0);
+  const stepL = Math.round(-front * 1.4 * s) - (front !== 0 && c < -0.5 ? 1 : 0);
+  return {
     thigh_R: { angle: thighR, y: stepR },
     shin_R: { angle: shinR },
     foot_R: { angle: -(thighR + shinR) }, // Fuß bleibt waagerecht
     thigh_L: { angle: thighL, y: stepL },
     shin_L: { angle: shinL },
     foot_L: { angle: -(thighL + shinL) },
-    // Der Rock schwingt mit den Schritten
-    skirt_front: { x: sway },
-    skirt_back: { x: sway },
   };
+}
+
+/**
+ * Beine schräg (Südost, Südwest, Nordost, Nordwest): Eine Drehung in der
+ * Bildebene würde den Fuß nur seitlich schwingen lassen. Stattdessen wird das
+ * ganze Bein entlang der Laufrichtung vor- und zurückgesetzt – bei Südost
+ * also nach rechts unten bzw. links oben – und beim Durchschwingen angehoben.
+ * Ohne Drehung bleiben die Füße exakt in ihrer Richtung und pixelgenau.
+ */
+function diagonalLegs(side, front, s, c) {
+  const toRight = Math.sign(side); // +1: Schritt nach vorne geht im Bild nach rechts
+  const toCamera = Math.sign(front); // +1: Schritt nach vorne geht im Bild nach unten
+  const step = (amount) => ({
+    x: Math.round(2 * amount) * toRight,
+    y: Math.round(1.6 * amount) * toCamera,
+  });
+  // Der Oberschenkel geht nur halb mit (sonst blitzt im Rockschlitz viel Haut
+  // auf), Schienbein und Stiefel machen den Rest des Schritts.
+  const leg = (amount, lift) => {
+    const total = step(amount);
+    const thigh = step(amount / 2);
+    return [thigh, { x: total.x - thigh.x, y: total.y - thigh.y - lift }];
+  };
+  const [thighR, shinR] = leg(s, c > 0.5 ? 1 : 0);
+  const [thighL, shinL] = leg(-s, c < -0.5 ? 1 : 0);
+  return { thigh_R: thighR, shin_R: shinR, thigh_L: thighL, shin_L: shinL };
 }
 
 /** Stehen: ruhiges Atmen (Oberkörper alle 0,7 s um 1 px auf und ab). */
